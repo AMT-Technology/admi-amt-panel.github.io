@@ -242,11 +242,10 @@
 
 
   <script>
-firebase.auth().onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "/login/";
-  }
+auth.onAuthStateChanged(user => {
+  if (!user) location.href = "/";
 });
+
 </script>
 
 </body>
