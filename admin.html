@@ -232,25 +232,34 @@
 </div>
 
 <!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<!-- Add Firebase Authentication SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
+<!-- Tu configuración -->
 <script src="firebase.js"></script>
-<script src="admin.js"></script>
 
+<script>
+// Make sure firebase.js initializes the app, then get the auth instance
+const auth = firebase.auth(); // This line initializes the 'auth' variable
 
- <script>
-firebase.auth().onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "index.html";
-  }
-});
+function login(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      location.href = "admin.html";
+    })
+    .catch(e => {
+      document.getElementById("msg").textContent = e.message;
+    });
+}
 </script>
-
 
 </body>
 </html>
+
 
 
