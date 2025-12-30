@@ -241,22 +241,15 @@
 <script src="firebase.js"></script>
 
 <script>
-// Make sure firebase-app.js is loaded first, then initialize the auth object
-const auth = firebase.auth(); // This line initializes the auth service
-
-function login(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => {
-      location.href = "admin.html";
-    })
-    .catch(e => {
-      document.getElementById("msg").textContent = e.message;
-    });
-}
+auth.onAuthStateChanged(user => {
+  if (!user || user.email !== "des.amt.01@gmail.com") {
+    auth.signOut();
+    location.href = "index.html";
+  }
+});
 </script>
+
+
 
 </body>
 </html>
