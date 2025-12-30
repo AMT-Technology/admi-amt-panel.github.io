@@ -6,8 +6,11 @@ auth.onAuthStateChanged(user => {
 });
 
 function logout() {
-  auth.signOut();
+  auth.signOut().then(() => {
+    location.href = "index.html"; // vuelve al login
+  });
 }
+
 
 // =======================================================
 // VARIABLES GLOBALES
