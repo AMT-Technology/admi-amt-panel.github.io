@@ -2,7 +2,10 @@
 // PROTECCIÓN DE ACCESO
 // =======================================================
 auth.onAuthStateChanged(user => {
-  if (!user) location.href = "index.html";
+  if (!user || user.email !== "des.amt.01@gmail.com") {
+    auth.signOut();
+    location.href = "index.html";
+  }
 });
 
 window.logout = function () {
@@ -10,8 +13,6 @@ window.logout = function () {
     location.href = "index.html";
   });
 };
-
-
 
 // =======================================================
 // VARIABLES GLOBALES
@@ -24,6 +25,31 @@ const appsListWrap = document.getElementById("appsListWrap");
 const loadingMoreEl = document.getElementById("loadingMore");
 const noMoreEl = document.getElementById("noMore");
 const searchInput = document.getElementById("searchInput");
+
+// Referencias a elementos del formulario
+const nombre = document.getElementById("nombre");
+const descripcion = document.getElementById("descripcion");
+const version = document.getElementById("version");
+const categoria = document.getElementById("categoria");
+const idioma = document.getElementById("idioma");
+const tipo = document.getElementById("tipo");
+const internet = document.getElementById("internet");
+const sistema = document.getElementById("sistema");
+const requisitos = document.getElementById("requisitos");
+const fechaAct = document.getElementById("fechaAct");
+const edad = document.getElementById("edad");
+const anuncios = document.getElementById("anuncios");
+const privacidad = document.getElementById("privacidad");
+const imagenUrl = document.getElementById("imagenUrl");
+const capturasUrl = document.getElementById("capturasUrl");
+const iconoUrl = document.getElementById("iconoUrl");
+const apkUrl = document.getElementById("apkUrl");
+const size = document.getElementById("size");
+const playstoreUrl = document.getElementById("playstoreUrl");
+const uptodownUrl = document.getElementById("uptodownUrl");
+const megaUrl = document.getElementById("megaUrl");
+const mediafireUrl = document.getElementById("mediafireUrl");
+const packageName = document.getElementById("packageName");
 
 // Paging
 const PAGE_SIZE = 10;
@@ -40,53 +66,27 @@ let loadedAppsCache = [];
 // =======================================================
 async function generarPaginaApp(appData) {
   try {
-    // 1. Obtener el template base
-    let htmlTemplate = `<!DOCTYPE html>
+    console.log("Generando página para:", appData.nombre);
+    
+    // Crear el contenido HTML
+    const htmlTemplate = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>${appData.nombre} — Appser Store | Descarga ${appData.nombre} para Android</title>
+  <title>${escapeHtml(appData.nombre)} — Appser Store | Descarga ${escapeHtml(appData.nombre)} para Android</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   
   <!-- 🔍 SEO -->
-  <meta name="description" content="Descarga ${appData.nombre} para Android desde Appser Store. ${appData.descripcion?.substring(0, 150) || ''}">
-  <meta name="keywords" content="${appData.nombre}, ${appData.categoria}, Android, APK, descargar">
+  <meta name="description" content="Descarga ${escapeHtml(appData.nombre)} para Android desde Appser Store. ${escapeHtml(appData.descripcion?.substring(0, 150) || '')}">
+  <meta name="keywords" content="${escapeHtml(appData.nombre)}, ${escapeHtml(appData.categoria)}, Android, APK, descargar">
   <meta name="robots" content="index, follow">
   
   <!-- Open Graph -->
-  <meta property="og:title" content="${appData.nombre} — Appser Store">
-  <meta property="og:description" content="${appData.descripcion?.substring(0, 200) || ''}">
+  <meta property="og:title" content="${escapeHtml(appData.nombre)} — Appser Store">
+  <meta property="og:description" content="${escapeHtml(appData.descripcion?.substring(0, 200) || '')}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://appsem.rap-infinite.online/app-${appData.id}.html">
   <meta property="og:image" content="${appData.imagen || 'https://appsem.rap-infinite.online/logo.webp'}">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${appData.nombre}">
-  <meta name="twitter:description" content="${appData.descripcion?.substring(0, 200) || ''}">
-  <meta name="twitter:image" content="${appData.imagen || 'https://appsem.rap-infinite.online/logo.webp'}">
-  
-  <!-- Schema JSON-LD -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "${appData.nombre}",
-      "applicationCategory": "${appData.categoria}",
-      "operatingSystem": "Android",
-      "description": "${appData.descripcion?.replace(/"/g, '\\"') || ''}",
-      "image": "${appData.imagen || ''}",
-      "softwareVersion": "${appData.version || ''}",
-      "datePublished": "${new Date().toISOString()}",
-      "author": {"@type": "Organization", "name": "Appser Store"},
-      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "${appData.ratingAvg || 0}",
-        "ratingCount": "${appData.ratingCount || 0}"
-      }
-    }
-  </script>
   
   <!-- Estilos -->
   <link rel="stylesheet" href="styles.css">
@@ -115,19 +115,19 @@ async function generarPaginaApp(appData) {
   <main class="app-detail-page">
     <div class="app-detail-container">
       <div class="overlay-header">
-        <img id="detailIcon" class="overlay-icon" src="${appData.imagen}" alt="${appData.nombre}" loading="lazy">
+        <img id="detailIcon" class="overlay-icon" src="${appData.imagen || ''}" alt="${escapeHtml(appData.nombre)}" loading="lazy">
         <div>
-          <h1 id="detailName">${appData.nombre}</h1>
-          <p id="detailCategory">${appData.categoria}</p>
+          <h1 id="detailName">${escapeHtml(appData.nombre)}</h1>
+          <p id="detailCategory">${escapeHtml(appData.categoria || '')}</p>
           <p id="detailSize">📦 Tamaño: ${appData.size || '—'}</p>
           <p id="detailInternet">${appData.internet === 'offline' ? '📴 Funciona sin Internet' : '🌐 Requiere Internet'}</p>
         </div>
       </div>
 
       <div class="install-share-row">
-        <button id="installBtn" class="install-btn" onclick="descargarAPK()">
+        ${appData.apk ? `<button class="install-btn" onclick="window.open('${appData.apk}', '_blank')">
           <img src="assets/icons/descargar.png" alt="Descarga Directa">
-        </button>
+        </button>` : ''}
         
         ${appData.playstoreUrl ? `<button class="playstore-btn" onclick="window.open('${appData.playstoreUrl}', '_blank')">
           <img src="assets/icons/playstore.png" alt="Play Store">
@@ -145,26 +145,15 @@ async function generarPaginaApp(appData) {
           <img src="assets/icons/mediafire.png" alt="Mediafire">
         </button>` : ''}
         
-        <button id="shareBtn" class="share-btn" onclick="compartirApp()">
+        <button class="share-btn" onclick="compartirApp()">
           <img src="assets/icons/compartir.png" alt="Compartir">
         </button>
       </div>
 
-      <p id="detailStats" class="detail-stats">
+      <p class="detail-stats">
         Descargas: ${(appData.descargasReales || 0).toLocaleString("es-ES")} • 
         Likes: ${(appData.likes || 0).toLocaleString("es-ES")}
       </p>
-
-      <!-- Rating estático -->
-      <div class="rating-block">
-        <p id="ratingLabel" class="rating-label">
-          Valoración: ${(appData.ratingAvg || 0).toFixed(1)} (${appData.ratingCount || 0} votos)
-        </p>
-        <div id="starsRow" class="stars-row">
-          ${renderStarsStatic(appData.ratingAvg || 0)}
-        </div>
-        <button id="likeBtn" class="like-btn" onclick="darLike()">❤️ Me gusta</button>
-      </div>
 
       <!-- Información de la App -->
       <h2>Información de la app</h2>
@@ -173,7 +162,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">🌐</span>
           <div>
             <p class="info-title">Idioma</p>
-            <p class="info-value">${appData.idioma || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.idioma || '—')}</p>
           </div>
         </div>
         
@@ -181,7 +170,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">🔢</span>
           <div>
             <p class="info-title">Versión</p>
-            <p class="info-value">${appData.version || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.version || '—')}</p>
           </div>
         </div>
         
@@ -189,7 +178,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">🏷️</span>
           <div>
             <p class="info-title">Licencia</p>
-            <p class="info-value">${appData.tipo || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.tipo || '—')}</p>
           </div>
         </div>
         
@@ -197,7 +186,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">📱</span>
           <div>
             <p class="info-title">Sistema operativo</p>
-            <p class="info-value">${appData.sistemaOperativo || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.sistemaOperativo || '—')}</p>
           </div>
         </div>
         
@@ -205,7 +194,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">⚙️</span>
           <div>
             <p class="info-title">Requisitos del sistema</p>
-            <p class="info-value">${appData.requisitos || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.requisitos || '—')}</p>
           </div>
         </div>
         
@@ -221,7 +210,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">🔞</span>
           <div>
             <p class="info-title">Edad recomendada</p>
-            <p class="info-value">${appData.edad || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.edad || '—')}</p>
           </div>
         </div>
         
@@ -255,7 +244,7 @@ async function generarPaginaApp(appData) {
           <span class="info-icon">🆔</span>
           <div>
             <p class="info-title">Package Name</p>
-            <p class="info-value">${appData.packageName || '—'}</p>
+            <p class="info-value">${escapeHtml(appData.packageName || '—')}</p>
           </div>
         </div>
         
@@ -269,19 +258,18 @@ async function generarPaginaApp(appData) {
       </div>
 
       <h2>Descripción</h2>
-      <p id="detailDesc" class="detail-desc">${appData.descripcion || ''}</p>
+      <p class="detail-desc">${escapeHtml(appData.descripcion || '')}</p>
 
       ${appData.imgSecundarias && appData.imgSecundarias.length > 0 ? `
       <h2>Capturas de pantalla</h2>
       <div class="screenshots-row">
-        ${appData.imgSecundarias.map(img => `<img src="${img}" alt="Captura" loading="lazy">`).join('')}
+        ${appData.imgSecundarias.map(img => `<img src="${img}" alt="Captura de ${escapeHtml(appData.nombre)}" loading="lazy">`).join('')}
       </div>
       ` : ''}
 
-      <h2>Comentarios y reseñas</h2>
-      <div id="reviewsList" class="reviews-list">
-        <p>Para ver y dejar reseñas, visita la versión dinámica de esta página.</p>
-        <a href="app-dynamic.html?id=${appData.id}" class="btn-primary">Ver página con reseñas</a>
+      <div class="page-footer-note">
+        <p>Para interactuar con reseñas, valoraciones y funciones dinámicas, visita la versión completa de esta página:</p>
+        <a href="app-dynamic.html?id=${appData.id}" class="btn-primary" style="display:inline-block; margin-top:10px;">Ver página dinámica completa</a>
       </div>
     </div>
   </main>
@@ -295,25 +283,10 @@ async function generarPaginaApp(appData) {
   </footer>
 
   <script>
-    // Funciones básicas
-    function renderStarsStatic(rating) {
-      const full = Math.floor(rating);
-      const half = rating % 1 >= 0.5 ? 1 : 0;
-      let stars = '';
-      for (let i = 0; i < full; i++) stars += '★';
-      if (half) stars += '⯨';
-      for (let i = 0; i < 5 - full - half; i++) stars += '☆';
-      return stars;
-    }
-    
-    function descargarAPK() {
-      window.open('${appData.apk}', '_blank');
-    }
-    
     function compartirApp() {
       const url = window.location.href;
-      const title = '${appData.nombre} — Appser Store';
-      const text = 'Mira esta app en Appser Store: ${appData.nombre}';
+      const title = '${escapeHtml(appData.nombre)} — Appser Store';
+      const text = 'Mira esta app en Appser Store: ${escapeHtml(appData.nombre)}';
       
       if (navigator.share) {
         navigator.share({ title, text, url });
@@ -322,49 +295,45 @@ async function generarPaginaApp(appData) {
         alert('¡Enlace copiado al portapapeles!');
       }
     }
-    
-    function darLike() {
-      alert('Para dar like, visita la versión dinámica con Firebase.');
-    }
   </script>
 </body>
 </html>`;
 
-    // 2. Crear el archivo HTML
-    const blob = new Blob([htmlTemplate], { type: 'text/html' });
-    
-    // 3. Subir a Firebase Storage
+    // Subir a Firebase Storage
     const storageRef = firebase.storage().ref();
     const pageRef = storageRef.child(`pages/app-${appData.id}.html`);
     
-    await pageRef.put(blob);
+    await pageRef.putString(htmlTemplate, 'raw', {
+      contentType: 'text/html'
+    });
     
-    // 4. Obtener la URL pública
+    // Obtener la URL pública
     const downloadURL = await pageRef.getDownloadURL();
     
-    // 5. Guardar la URL en Firestore
+    // Guardar la URL en Firestore
     await db.collection("apps").doc(appData.id).update({
       pageUrl: downloadURL,
       pagePath: `pages/app-${appData.id}.html`
     });
     
-    console.log(`✅ Página generada: app-${appData.id}.html`);
+    console.log(`✅ Página generada: ${downloadURL}`);
     return downloadURL;
     
   } catch (error) {
     console.error("❌ Error generando página:", error);
-    throw error;
+    // No lanzamos el error para no interrumpir el guardado principal
+    return null;
   }
 }
 
-function renderStarsStatic(rating) {
-  const full = Math.floor(rating || 0);
-  const half = (rating || 0) % 1 >= 0.5 ? 1 : 0;
-  let stars = '';
-  for (let i = 0; i < full; i++) stars += '★';
-  if (half) stars += '⯨';
-  for (let i = 0; i < 5 - full - half; i++) stars += '☆';
-  return stars;
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 // =======================================================
@@ -391,7 +360,7 @@ function loadMoreApps() {
   let query = db.collection("apps").orderBy("fecha", "desc").limit(PAGE_SIZE);
 
   if (lastVisible) {
-    query = db.collection("apps").orderBy("fecha", "desc").startAfter(lastVisible).limit(PAGE_SIZE);
+    query = query.startAfter(lastVisible);
   }
 
   query.get()
@@ -406,7 +375,7 @@ function loadMoreApps() {
 
       const docs = snap.docs;
       lastVisible = docs[docs.length - 1];
-      const items = docs.map(d => d.data());
+      const items = docs.map(d => ({ id: d.id, ...d.data() }));
       loadedAppsCache = loadedAppsCache.concat(items);
       renderApps(items, true);
 
@@ -432,14 +401,14 @@ function renderApps(items, append = false) {
   let html = items.map(a => {
     return `
       <tr id="app-row-${a.id}">
-        <td><img src="${a.icono || a.imagen || ''}" class="table-icon" alt="icono"></td>
-        <td>${escapeHtml(a.nombre || '')}</td>
-        <td>${escapeHtml(a.categoria || '')}</td>
-        <td>${escapeHtml(a.version || '')}</td>
-        <td>
+        <td><img src="${a.icono || a.imagen || ''}" class="table-icon" alt="icono" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNlNWU1ZTUiIHJ4PSI4Ii8+PC9zdmc+'"></td>
+        <td>${escapeHtml(a.nombre || 'Sin nombre')}</td>
+        <td>${escapeHtml(a.categoria || 'Sin categoría')}</td>
+        <td>${escapeHtml(a.version || '1.0')}</td>
+        <td class="actions-cell">
           <button class="btn-edit" onclick="cargarParaEditar('${a.id}')">✏️ Editar</button>
           <button class="btn-view" onclick="window.open('app-dynamic.html?id=${a.id}', '_blank')">👁️ Ver</button>
-          <button class="btn-delete" onclick="eliminarApp('${a.id}')">🗑 Eliminar</button>
+          <button class="btn-delete" onclick="eliminarApp('${a.id}', '${escapeHtml(a.nombre || 'esta app')}')">🗑 Eliminar</button>
         </td>
       </tr>
     `;
@@ -450,21 +419,6 @@ function renderApps(items, append = false) {
   } else {
     appsList.innerHTML = html;
   }
-}
-
-function escapeHtml(str) {
-  return (str + '').replace(/[&<>"'`=\/]/g, function(s) {
-    return ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-      '/': '&#x2F;',
-      '`': '&#x60;',
-      '=': '&#x3D;'
-    })[s];
-  });
 }
 
 // =======================================================
@@ -501,13 +455,14 @@ function performSearch(term) {
         loadingMoreEl.classList.add("hidden");
         return;
       }
-      const items = snap.docs.map(d => d.data());
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       items.sort((a,b) => (b.fecha || 0) - (a.fecha || 0));
       renderApps(items, false);
       loadingMoreEl.classList.add("hidden");
     })
     .catch(err => {
       console.error("Error en búsqueda:", err);
+      appsList.innerHTML = '<tr><td colspan="5" style="padding:12px;color:#ef4444">Error en la búsqueda</td></tr>';
       loadingMoreEl.classList.add("hidden");
     });
 }
@@ -529,192 +484,256 @@ appsListWrap.addEventListener('scroll', () => {
 function cargarParaEditar(id) {
   editId = id;
   document.getElementById("formTitle").textContent = "✏️ Editar Aplicación";
-  document.getElementById("subirBtn").textContent = "GUARDAR";
+  document.getElementById("subirBtn").textContent = "GUARDAR CAMBIOS";
   document.getElementById("cancelarBtn").classList.remove("hidden");
 
   db.collection("apps").doc(id).get().then(doc => {
     const a = doc.data();
 
-    document.getElementById("nombre").value = a.nombre || '';
-    document.getElementById("descripcion").value = a.descripcion || '';
-    document.getElementById("version").value = a.version || '';
-    document.getElementById("categoria").value = a.categoria || '';
-    document.getElementById("idioma").value = a.idioma || '';
-    document.getElementById("tipo").value = a.tipo || '';
-    document.getElementById("internet").value = a.internet || 'offline';
-
-    document.getElementById("sistema").value = a.sistemaOperativo || "";
-    document.getElementById("requisitos").value = a.requisitos || "";
-    document.getElementById("fechaAct").value = a.fechaActualizacion || "";
-    document.getElementById("edad").value = a.edad || "";
-    document.getElementById("anuncios").value = a.anuncios || "no";
-    document.getElementById("privacidad").value = a.privacidadUrl || "";
-
-    document.getElementById("imagenUrl").value = a.imagen || "";
-    document.getElementById("capturasUrl").value = a.imgSecundarias ? a.imgSecundarias.join(",") : "";
-    document.getElementById("iconoUrl").value = a.icono || "";
-    document.getElementById("apkUrl").value = a.apk || "";
-
-    document.getElementById("packageName").value = a.packageName || "";
-
-    
-    document.getElementById("size").value = a.size || "";
+    nombre.value = a.nombre || '';
+    descripcion.value = a.descripcion || '';
+    version.value = a.version || '';
+    categoria.value = a.categoria || 'Educación';
+    idioma.value = a.idioma || '';
+    tipo.value = a.tipo || 'Gratis';
+    internet.value = a.internet || 'offline';
+    sistema.value = a.sistemaOperativo || "";
+    requisitos.value = a.requisitos || "";
+    fechaAct.value = a.fechaActualizacion || "";
+    edad.value = a.edad || "";
+    anuncios.value = a.anuncios || "no";
+    privacidad.value = a.privacidadUrl || "";
+    imagenUrl.value = a.imagen || "";
+    capturasUrl.value = a.imgSecundarias ? a.imgSecundarias.join(", ") : "";
+    iconoUrl.value = a.icono || "";
+    apkUrl.value = a.apk || "";
+    packageName.value = a.packageName || "";
+    size.value = a.size || "";
     prevSize = a.size || null;
-
-    // NUEVOS CAMPOS DE ENLACES
-    document.getElementById("playstoreUrl").value = a.playstoreUrl || "";
-    document.getElementById("uptodownUrl").value = a.uptodownUrl || "";
-    document.getElementById("megaUrl").value = a.megaUrl || "";
-    document.getElementById("mediafireUrl").value = a.mediafireUrl || "";
+    playstoreUrl.value = a.playstoreUrl || "";
+    uptodownUrl.value = a.uptodownUrl || "";
+    megaUrl.value = a.megaUrl || "";
+    mediafireUrl.value = a.mediafireUrl || "";
 
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }).catch(err => {
+    console.error("Error cargando app para editar:", err);
+    alert("Error al cargar la aplicación para editar");
   });
 }
 
 // =======================================================
-// CARGAR FORMULARIO DE NUEVA APP
+// LIMPIAR FORMULARIO
 // =======================================================
-function cargarFormularioNuevo() {
-  limpiarFormulario();
-  document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
-  document.getElementById("subirBtn").textContent = "SUBIR APP";
-  document.getElementById("cancelarBtn").classList.add("hidden");
-
-  const inputs = document.querySelectorAll("input, textarea, select");
+function limpiarFormulario() {
+  const inputs = [
+    nombre, descripcion, version, idioma, sistema, requisitos,
+    edad, privacidad, imagenUrl, capturasUrl, iconoUrl, apkUrl,
+    size, playstoreUrl, uptodownUrl, megaUrl, mediafireUrl,
+    packageName
+  ];
+  
   inputs.forEach(input => {
-    input.addEventListener('input', function() {
-      document.getElementById("cancelarBtn").classList.remove("hidden");
-    });
+    if (input) input.value = "";
   });
+  
+  fechaAct.value = "";
+  
+  // Resetear selects a valores por defecto
+  categoria.value = "Educación";
+  tipo.value = "Gratis";
+  internet.value = "offline";
+  anuncios.value = "no";
+  
+  // Resetear inputs de archivos
+  document.getElementById("imagen").value = "";
+  document.getElementById("apk").value = "";
+  document.getElementById("capturas").value = "";
+  
+  // Resetear labels
+  document.getElementById("imagenLabel").textContent = "Seleccionar";
+  document.getElementById("apkLabel").textContent = "Seleccionar";
+  document.getElementById("capturasLabel").textContent = "Seleccionar";
+  
+  prevSize = null;
+  editId = null;
 }
 
 // =======================================================
-// GUARDAR / EDITAR APP (CON GENERACIÓN DE PÁGINA)
+// GUARDAR / EDITAR APP
 // =======================================================
 async function guardarApp() {
   const btn = document.getElementById("subirBtn");
   const estado = document.getElementById("estado");
+  const originalBtnText = btn.textContent;
 
-  btn.disabled = true;
-  estado.textContent = "Guardando...";
-
-  const campos = {
-    nombre: nombre.value.trim(),
-    descripcion: descripcion.value.trim(),
-    version: version.value.trim(),
-    categoria: categoria.value.trim(),
-    idioma: idioma.value.trim(),
-    tipo: tipo.value.trim(),
-    internet: internet.value,
-    sistemaOperativo: sistema.value.trim(),
-    requisitos: requisitos.value.trim(),
-    fechaActualizacion: fechaAct.value,
-    edad: edad.value.trim(),
-    anuncios: anuncios.value,
-    privacidadUrl: privacidad.value.trim(),
-    imagen: imagenUrl.value.trim(),
-    apk: apkUrl.value.trim(),
-    size: size.value.trim() || "N/A",
-    imgSecundarias: capturasUrl.value.split(",").map(u => u.trim()).filter(u => u !== ""),
-    // NUEVOS CAMPOS
-    playstoreUrl: playstoreUrl.value.trim(),
-    uptodownUrl: uptodownUrl.value.trim(),
-    megaUrl: megaUrl.value.trim(),
-    mediafireUrl: mediafireUrl.value.trim(),
-    packageName: packageName.value.trim(),
-    fecha: Date.now()
-  };
-
-  if (!campos.nombre || !campos.descripcion || !campos.version) {
-    alert("Completa al menos nombre, descripción y versión.");
-    btn.disabled = false;
-    estado.textContent = "";
+  // Validaciones básicas
+  if (!nombre.value.trim()) {
+    alert("El nombre es obligatorio");
+    return;
+  }
+  
+  if (!descripcion.value.trim()) {
+    alert("La descripción es obligatoria");
+    return;
+  }
+  
+  if (!version.value.trim()) {
+    alert("La versión es obligatoria");
     return;
   }
 
-  const imagenFile = imagen.files[0];
-  const apkFile = apk.files[0];
-  const capturasFiles = capturas.files;
-  const storageRef = firebase.storage().ref();
-  let promesas = [];
-
-  if (imagenFile) {
-    promesas.push(
-      storageRef.child("images/" + imagenFile.name)
-        .put(imagenFile)
-        .then(r => r.ref.getDownloadURL())
-        .then(url => campos.imagen = url)
-    );
-  }
-
-  if (apkFile) {
-    promesas.push(
-      storageRef.child("apk/" + apkFile.name)
-        .put(apkFile)
-        .then(r => r.ref.getDownloadURL())
-        .then(url => campos.apk = url)
-    );
-  }
-
-  if (capturasFiles.length > 0) {
-    campos.imgSecundarias = [];
-    promesas.push(
-      Promise.all(
-        [...capturasFiles].map(file =>
-          storageRef.child("capturas/" + file.name)
-          .put(file)
-          .then(r => r.ref.getDownloadURL())
-          .then(url => campos.imgSecundarias.push(url))
-        )
-      )
-    );
-  }
-
-  await Promise.all(promesas);
-
-  let id = editId || db.collection("apps").doc().id;
-
-  const data = {
-    id,
-    ...campos
-  };
+  btn.disabled = true;
+  btn.textContent = "Guardando...";
+  estado.textContent = "Guardando aplicación...";
+  estado.style.color = "#3b82f6";
 
   try {
-    // 1. Guardar en Firestore
-    await db.collection("apps").doc(id).set(data, { merge: true });
+    // Recopilar datos del formulario
+    const appData = {
+      nombre: nombre.value.trim(),
+      descripcion: descripcion.value.trim(),
+      version: version.value.trim(),
+      categoria: categoria.value,
+      idioma: idioma.value.trim(),
+      tipo: tipo.value,
+      internet: internet.value,
+      sistemaOperativo: sistema.value.trim(),
+      requisitos: requisitos.value.trim(),
+      fechaActualizacion: fechaAct.value || null,
+      edad: edad.value.trim(),
+      anuncios: anuncios.value,
+      privacidadUrl: privacidad.value.trim(),
+      imagen: imagenUrl.value.trim(),
+      apk: apkUrl.value.trim(),
+      size: size.value.trim() || "N/A",
+      packageName: packageName.value.trim(),
+      playstoreUrl: playstoreUrl.value.trim(),
+      uptodownUrl: uptodownUrl.value.trim(),
+      megaUrl: megaUrl.value.trim(),
+      mediafireUrl: mediafireUrl.value.trim(),
+      fecha: Date.now()
+    };
+
+    // Procesar capturas (separadas por comas)
+    if (capturasUrl.value.trim()) {
+      appData.imgSecundarias = capturasUrl.value.split(",")
+        .map(url => url.trim())
+        .filter(url => url.length > 0);
+    }
+
+    // Procesar archivos subidos
+    const imagenFile = document.getElementById("imagen").files[0];
+    const apkFile = document.getElementById("apk").files[0];
+    const capturasFiles = document.getElementById("capturas").files;
+    const storageRef = firebase.storage().ref();
+    const uploadPromises = [];
+
+    // Subir imagen principal
+    if (imagenFile) {
+      const imagenPromise = storageRef.child(`images/${Date.now()}_${imagenFile.name}`)
+        .put(imagenFile)
+        .then(snapshot => snapshot.ref.getDownloadURL())
+        .then(url => {
+          appData.imagen = url;
+        });
+      uploadPromises.push(imagenPromise);
+    }
+
+    // Subir APK
+    if (apkFile) {
+      const apkPromise = storageRef.child(`apks/${Date.now()}_${apkFile.name}`)
+        .put(apkFile)
+        .then(snapshot => snapshot.ref.getDownloadURL())
+        .then(url => {
+          appData.apk = url;
+        });
+      uploadPromises.push(apkPromise);
+    }
+
+    // Subir capturas secundarias
+    if (capturasFiles.length > 0) {
+      appData.imgSecundarias = appData.imgSecundarias || [];
+      
+      const capturasPromises = Array.from(capturasFiles).map(file => {
+        return storageRef.child(`screenshots/${Date.now()}_${file.name}`)
+          .put(file)
+          .then(snapshot => snapshot.ref.getDownloadURL())
+          .then(url => {
+            appData.imgSecundarias.push(url);
+          });
+      });
+      
+      uploadPromises.push(Promise.all(capturasPromises));
+    }
+
+    // Esperar a que se suban todos los archivos
+    if (uploadPromises.length > 0) {
+      estado.textContent = "Subiendo archivos...";
+      await Promise.all(uploadPromises);
+    }
+
+    // Determinar ID (nuevo o edición)
+    const appId = editId || db.collection("apps").doc().id;
+    appData.id = appId;
+
+    // Guardar en Firestore
+    estado.textContent = "Guardando en base de datos...";
+    await db.collection("apps").doc(appId).set(appData, { merge: true });
+
+    // Generar página HTML
+    estado.textContent = "Generando página web...";
+    await generarPaginaApp(appData);
+
+    // Éxito
+    estado.textContent = "✅ ¡Aplicación guardada correctamente!";
+    estado.style.color = "#10b981";
     
-    // 2. Generar página HTML estática
-    await generarPaginaApp(data);
-    
-    estado.textContent = "✅ App guardada y página generada";
-    btn.disabled = false;
-    editId = null;
+    // Resetear formulario
+    limpiarFormulario();
     document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
     btn.textContent = "SUBIR APP";
-    limpiarFormulario();
-    
-    // 3. Recargar lista
+    document.getElementById("cancelarBtn").classList.add("hidden");
+    editId = null;
+
+    // Recargar lista
     if (!inSearchMode) {
       loadInitialApps();
     } else {
       const currentSearch = searchInput.value.trim();
       if (currentSearch) performSearch(currentSearch);
     }
-    
-  } catch (err) {
-    estado.textContent = "❌ Error: " + err.message;
+
+  } catch (error) {
+    console.error("Error guardando aplicación:", error);
+    estado.textContent = "❌ Error: " + (error.message || "No se pudo guardar");
+    estado.style.color = "#ef4444";
+    alert("Error al guardar: " + error.message);
+  } finally {
     btn.disabled = false;
+    btn.textContent = originalBtnText;
+    
+    // Auto-limpiar mensaje de estado después de 5 segundos
+    setTimeout(() => {
+      estado.textContent = "";
+    }, 5000);
   }
 }
 
 // =======================================================
-// ELIMINAR APP (Y SU PÁGINA)
+// ELIMINAR APP
 // =======================================================
-async function eliminarApp(id) {
-  if (!confirm("¿Estás seguro de eliminar esta aplicación? También se eliminará su página.")) return;
-  
+async function eliminarApp(id, nombreApp) {
+  if (!confirm(`¿Estás seguro de eliminar la aplicación "${nombreApp}"? Esta acción no se puede deshacer.`)) {
+    return;
+  }
+
+  const estado = document.getElementById("estado");
+  estado.textContent = "Eliminando aplicación...";
+  estado.style.color = "#f59e0b";
+
   try {
-    // 1. Eliminar la página de Storage si existe
+    // 1. Intentar eliminar la página de Storage si existe
     const storageRef = firebase.storage().ref();
     const pageRef = storageRef.child(`pages/app-${id}.html`);
     
@@ -722,88 +741,93 @@ async function eliminarApp(id) {
       await pageRef.delete();
       console.log(`Página app-${id}.html eliminada`);
     } catch (error) {
-      console.log("No se encontró la página para eliminar");
+      console.log("No se encontró la página para eliminar o ya fue eliminada");
     }
-    
+
     // 2. Eliminar de Firestore
     await db.collection("apps").doc(id).delete();
-    
+
     // 3. Eliminar de la vista
-    document.getElementById(`app-row-${id}`)?.remove();
+    const row = document.getElementById(`app-row-${id}`);
+    if (row) {
+      row.style.opacity = "0.5";
+      setTimeout(() => row.remove(), 300);
+    }
+
+    estado.textContent = "✅ Aplicación eliminada correctamente";
+    estado.style.color = "#10b981";
     
-    alert("✅ Aplicación eliminada correctamente");
-    
+    setTimeout(() => {
+      estado.textContent = "";
+    }, 3000);
+
   } catch (error) {
     console.error("Error eliminando app:", error);
-    alert("❌ Error al eliminar la aplicación");
+    estado.textContent = "❌ Error al eliminar la aplicación";
+    estado.style.color = "#ef4444";
+    alert("Error al eliminar: " + error.message);
   }
 }
 
 // =======================================================
-// LIMPIAR FORMULARIO
-// =======================================================
-function limpiarFormulario() {
-  const inputs = document.querySelectorAll("input, textarea, select");
-  inputs.forEach(i => {
-    if (i.type !== 'button' && i.type !== 'submit' && i.id !== 'cancelarBtn') {
-      i.value = "";
-    }
-  });
-
-  categoria.value = "Educación";
-  tipo.value = "Gratis";
-  internet.value = "offline";
-  anuncios.value = "no";
-
-  const imagenEl = document.getElementById("imagen");
-  const apkEl = document.getElementById("apk");
-  const capturasEl = document.getElementById("capturas");
-  if (imagenEl) imagenEl.value = "";
-  if (apkEl) apkEl.value = "";
-  if (capturasEl) capturasEl.value = "";
-
-  // Resetear labels de archivos
-  document.getElementById("imagenLabel").textContent = "Seleccionar";
-  document.getElementById("apkLabel").textContent = "Seleccionar";
-  document.getElementById("capturasLabel").textContent = "Seleccionar";
-
-  prevSize = null;
-}
-
-// =======================================================
-// Cancelar edición o nueva aplicación
+// CANCELAR EDICIÓN
 // =======================================================
 function cancelarEdicion() {
-  limpiarFormulario();
-  document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
-  document.getElementById("subirBtn").textContent = "SUBIR APP";
-  document.getElementById("cancelarBtn").classList.add("hidden");
-  editId = null;
+  if (editId && confirm("¿Cancelar edición? Los cambios no guardados se perderán.")) {
+    limpiarFormulario();
+    document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
+    document.getElementById("subirBtn").textContent = "SUBIR APP";
+    document.getElementById("cancelarBtn").classList.add("hidden");
+    editId = null;
+  } else if (!editId) {
+    limpiarFormulario();
+    document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
+    document.getElementById("subirBtn").textContent = "SUBIR APP";
+    document.getElementById("cancelarBtn").classList.add("hidden");
+  }
 }
 
 // =======================================================
-// Inicializar carga al abrir la página
+// INICIALIZACIÓN
 // =======================================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Cargar apps
   loadInitialApps();
-  cargarFormularioNuevo();
+  
+  // Configurar eventos de archivos
   updateFileName('imagen', 'imagenLabel');
   updateFileName('apk', 'apkLabel');
   updateFileName('capturas', 'capturasLabel');
+  
+  // Configurar fecha por defecto
+  if (!fechaAct.value) {
+    const today = new Date().toISOString().split('T')[0];
+    fechaAct.value = today;
+  }
+  
+  // Configurar evento del botón de subir
+  document.getElementById("subirBtn").addEventListener("click", guardarApp);
 });
 
 // =======================================================
-// Función para actualizar el nombre del archivo en los botones de selección
+// FUNCIÓN PARA ACTUALIZAR NOMBRE DE ARCHIVOS
 // =======================================================
 function updateFileName(inputId, labelId) {
   const input = document.getElementById(inputId);
   const label = document.getElementById(labelId);
   
+  if (!input || !label) return;
+  
   input.addEventListener('change', function() {
-    if (input.files.length > 1) {
-      label.textContent = `${input.files.length} archivos seleccionados`;
-    } else if (input.files[0]) {
-      label.textContent = input.files[0].name;
+    if (this.files.length > 1) {
+      label.textContent = `${this.files.length} archivos seleccionados`;
+    } else if (this.files[0]) {
+      // Limitar nombre a 20 caracteres
+      let fileName = this.files[0].name;
+      if (fileName.length > 20) {
+        fileName = fileName.substring(0, 17) + '...';
+      }
+      label.textContent = fileName;
     } else {
       label.textContent = 'Seleccionar';
     }
