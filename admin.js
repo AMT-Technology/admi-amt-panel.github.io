@@ -36,6 +36,338 @@ let inSearchMode = false;
 let loadedAppsCache = [];
 
 // =======================================================
+// GENERAR PÁGINA HTML PARA LA APP
+// =======================================================
+async function generarPaginaApp(appData) {
+  try {
+    // 1. Obtener el template base
+    let htmlTemplate = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>${appData.nombre} — Appser Store | Descarga ${appData.nombre} para Android</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <!-- 🔍 SEO -->
+  <meta name="description" content="Descarga ${appData.nombre} para Android desde Appser Store. ${appData.descripcion?.substring(0, 150) || ''}">
+  <meta name="keywords" content="${appData.nombre}, ${appData.categoria}, Android, APK, descargar">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="${appData.nombre} — Appser Store">
+  <meta property="og:description" content="${appData.descripcion?.substring(0, 200) || ''}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://appsem.rap-infinite.online/app-${appData.id}.html">
+  <meta property="og:image" content="${appData.imagen || 'https://appsem.rap-infinite.online/logo.webp'}">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${appData.nombre}">
+  <meta name="twitter:description" content="${appData.descripcion?.substring(0, 200) || ''}">
+  <meta name="twitter:image" content="${appData.imagen || 'https://appsem.rap-infinite.online/logo.webp'}">
+  
+  <!-- Schema JSON-LD -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "${appData.nombre}",
+      "applicationCategory": "${appData.categoria}",
+      "operatingSystem": "Android",
+      "description": "${appData.descripcion?.replace(/"/g, '\\"') || ''}",
+      "image": "${appData.imagen || ''}",
+      "softwareVersion": "${appData.version || ''}",
+      "datePublished": "${new Date().toISOString()}",
+      "author": {"@type": "Organization", "name": "Appser Store"},
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "${appData.ratingAvg || 0}",
+        "ratingCount": "${appData.ratingCount || 0}"
+      }
+    }
+  </script>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app-page.css">
+  
+  <!-- Icono -->
+  <link rel="icon" href="/favicon.ico">
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="store-header">
+    <div class="brand">
+      <img src="logo.webp" alt="Appser" class="brand-logo" onclick="window.location.href='index.html'">
+      <div>
+        <h1>Appser Store</h1>
+        <p class="brand-tagline">Apps para todos</p>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <button class="btn-back" onclick="window.location.href='index.html'">← Volver al inicio</button>
+    </div>
+  </header>
+
+  <!-- CONTENIDO DE LA APP -->
+  <main class="app-detail-page">
+    <div class="app-detail-container">
+      <div class="overlay-header">
+        <img id="detailIcon" class="overlay-icon" src="${appData.imagen}" alt="${appData.nombre}" loading="lazy">
+        <div>
+          <h1 id="detailName">${appData.nombre}</h1>
+          <p id="detailCategory">${appData.categoria}</p>
+          <p id="detailSize">📦 Tamaño: ${appData.size || '—'}</p>
+          <p id="detailInternet">${appData.internet === 'offline' ? '📴 Funciona sin Internet' : '🌐 Requiere Internet'}</p>
+        </div>
+      </div>
+
+      <div class="install-share-row">
+        <button id="installBtn" class="install-btn" onclick="descargarAPK()">
+          <img src="assets/icons/descargar.png" alt="Descarga Directa">
+        </button>
+        
+        ${appData.playstoreUrl ? `<button class="playstore-btn" onclick="window.open('${appData.playstoreUrl}', '_blank')">
+          <img src="assets/icons/playstore.png" alt="Play Store">
+        </button>` : ''}
+        
+        ${appData.uptodownUrl ? `<button class="uptodown-btn" onclick="window.open('${appData.uptodownUrl}', '_blank')">
+          <img src="assets/icons/uptodown.png" alt="Uptodown">
+        </button>` : ''}
+        
+        ${appData.megaUrl ? `<button class="mega-btn" onclick="window.open('${appData.megaUrl}', '_blank')">
+          <img src="assets/icons/mega.png" alt="Mega">
+        </button>` : ''}
+        
+        ${appData.mediafireUrl ? `<button class="mediafire-btn" onclick="window.open('${appData.mediafireUrl}', '_blank')">
+          <img src="assets/icons/mediafire.png" alt="Mediafire">
+        </button>` : ''}
+        
+        <button id="shareBtn" class="share-btn" onclick="compartirApp()">
+          <img src="assets/icons/compartir.png" alt="Compartir">
+        </button>
+      </div>
+
+      <p id="detailStats" class="detail-stats">
+        Descargas: ${(appData.descargasReales || 0).toLocaleString("es-ES")} • 
+        Likes: ${(appData.likes || 0).toLocaleString("es-ES")}
+      </p>
+
+      <!-- Rating estático -->
+      <div class="rating-block">
+        <p id="ratingLabel" class="rating-label">
+          Valoración: ${(appData.ratingAvg || 0).toFixed(1)} (${appData.ratingCount || 0} votos)
+        </p>
+        <div id="starsRow" class="stars-row">
+          ${renderStarsStatic(appData.ratingAvg || 0)}
+        </div>
+        <button id="likeBtn" class="like-btn" onclick="darLike()">❤️ Me gusta</button>
+      </div>
+
+      <!-- Información de la App -->
+      <h2>Información de la app</h2>
+      <div class="info-grid">
+        <div class="info-box">
+          <span class="info-icon">🌐</span>
+          <div>
+            <p class="info-title">Idioma</p>
+            <p class="info-value">${appData.idioma || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">🔢</span>
+          <div>
+            <p class="info-title">Versión</p>
+            <p class="info-value">${appData.version || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">🏷️</span>
+          <div>
+            <p class="info-title">Licencia</p>
+            <p class="info-value">${appData.tipo || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">📱</span>
+          <div>
+            <p class="info-title">Sistema operativo</p>
+            <p class="info-value">${appData.sistemaOperativo || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">⚙️</span>
+          <div>
+            <p class="info-title">Requisitos del sistema</p>
+            <p class="info-value">${appData.requisitos || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">📅</span>
+          <div>
+            <p class="info-title">Actualización</p>
+            <p class="info-value">${appData.fechaActualizacion ? new Date(appData.fechaActualizacion).toLocaleDateString('es-ES') : '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">🔞</span>
+          <div>
+            <p class="info-title">Edad recomendada</p>
+            <p class="info-value">${appData.edad || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">📢</span>
+          <div>
+            <p class="info-title">Anuncios</p>
+            <p class="info-value">${appData.anuncios === 'si' ? 'Sí' : appData.anuncios === 'no' ? 'No' : '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">🔗</span>
+          <div>
+            <p class="info-title">Política de privacidad</p>
+            <p class="info-value">
+              ${appData.privacidadUrl ? `<a href="${appData.privacidadUrl}" target="_blank">Ver política</a>` : 'No disponible'}
+            </p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">📦</span>
+          <div>
+            <p class="info-title">Tamaño del APK</p>
+            <p class="info-value">${appData.size || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">🆔</span>
+          <div>
+            <p class="info-title">Package Name</p>
+            <p class="info-value">${appData.packageName || '—'}</p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <span class="info-icon">⬇️</span>
+          <div>
+            <p class="info-title">Descargas</p>
+            <p class="info-value">${(appData.descargasReales || 0).toLocaleString('es-ES')}</p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Descripción</h2>
+      <p id="detailDesc" class="detail-desc">${appData.descripcion || ''}</p>
+
+      ${appData.imgSecundarias && appData.imgSecundarias.length > 0 ? `
+      <h2>Capturas de pantalla</h2>
+      <div class="screenshots-row">
+        ${appData.imgSecundarias.map(img => `<img src="${img}" alt="Captura" loading="lazy">`).join('')}
+      </div>
+      ` : ''}
+
+      <h2>Comentarios y reseñas</h2>
+      <div id="reviewsList" class="reviews-list">
+        <p>Para ver y dejar reseñas, visita la versión dinámica de esta página.</p>
+        <a href="app-dynamic.html?id=${appData.id}" class="btn-primary">Ver página con reseñas</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="store-footer">
+    <div>
+      © ${new Date().getFullYear()} Appser Store — Apps para todos ·
+      <a href="/privacidad.html">Privacidad</a> ·
+      <a href="/terminos.html">Términos</a>
+    </div>
+  </footer>
+
+  <script>
+    // Funciones básicas
+    function renderStarsStatic(rating) {
+      const full = Math.floor(rating);
+      const half = rating % 1 >= 0.5 ? 1 : 0;
+      let stars = '';
+      for (let i = 0; i < full; i++) stars += '★';
+      if (half) stars += '⯨';
+      for (let i = 0; i < 5 - full - half; i++) stars += '☆';
+      return stars;
+    }
+    
+    function descargarAPK() {
+      window.open('${appData.apk}', '_blank');
+    }
+    
+    function compartirApp() {
+      const url = window.location.href;
+      const title = '${appData.nombre} — Appser Store';
+      const text = 'Mira esta app en Appser Store: ${appData.nombre}';
+      
+      if (navigator.share) {
+        navigator.share({ title, text, url });
+      } else {
+        navigator.clipboard.writeText(url);
+        alert('¡Enlace copiado al portapapeles!');
+      }
+    }
+    
+    function darLike() {
+      alert('Para dar like, visita la versión dinámica con Firebase.');
+    }
+  </script>
+</body>
+</html>`;
+
+    // 2. Crear el archivo HTML
+    const blob = new Blob([htmlTemplate], { type: 'text/html' });
+    
+    // 3. Subir a Firebase Storage
+    const storageRef = firebase.storage().ref();
+    const pageRef = storageRef.child(`pages/app-${appData.id}.html`);
+    
+    await pageRef.put(blob);
+    
+    // 4. Obtener la URL pública
+    const downloadURL = await pageRef.getDownloadURL();
+    
+    // 5. Guardar la URL en Firestore
+    await db.collection("apps").doc(appData.id).update({
+      pageUrl: downloadURL,
+      pagePath: `pages/app-${appData.id}.html`
+    });
+    
+    console.log(`✅ Página generada: app-${appData.id}.html`);
+    return downloadURL;
+    
+  } catch (error) {
+    console.error("❌ Error generando página:", error);
+    throw error;
+  }
+}
+
+function renderStarsStatic(rating) {
+  const full = Math.floor(rating || 0);
+  const half = (rating || 0) % 1 >= 0.5 ? 1 : 0;
+  let stars = '';
+  for (let i = 0; i < full; i++) stars += '★';
+  if (half) stars += '⯨';
+  for (let i = 0; i < 5 - full - half; i++) stars += '☆';
+  return stars;
+}
+
+// =======================================================
 // CARGA INICIAL
 // =======================================================
 function resetPagination() {
@@ -106,6 +438,7 @@ function renderApps(items, append = false) {
         <td>${escapeHtml(a.version || '')}</td>
         <td>
           <button class="btn-edit" onclick="cargarParaEditar('${a.id}')">✏️ Editar</button>
+          <button class="btn-view" onclick="window.open('app-dynamic.html?id=${a.id}', '_blank')">👁️ Ver</button>
           <button class="btn-delete" onclick="eliminarApp('${a.id}')">🗑 Eliminar</button>
         </td>
       </tr>
@@ -256,7 +589,7 @@ function cargarFormularioNuevo() {
 }
 
 // =======================================================
-// GUARDAR / EDITAR APP
+// GUARDAR / EDITAR APP (CON GENERACIÓN DE PÁGINA)
 // =======================================================
 async function guardarApp() {
   const btn = document.getElementById("subirBtn");
@@ -288,8 +621,8 @@ async function guardarApp() {
     uptodownUrl: uptodownUrl.value.trim(),
     megaUrl: megaUrl.value.trim(),
     mediafireUrl: mediafireUrl.value.trim(),
-    packageName: packageName.value.trim()
-
+    packageName: packageName.value.trim(),
+    fecha: Date.now()
   };
 
   if (!campos.nombre || !campos.descripcion || !campos.version) {
@@ -343,29 +676,67 @@ async function guardarApp() {
 
   const data = {
     id,
-    ...campos,
-    fecha: Date.now()
+    ...campos
   };
 
-  db.collection("apps").doc(id).set(data, { merge: true })
-    .then(() => {
-      estado.textContent = "Guardado ✔";
-      btn.disabled = false;
-      editId = null;
-      document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
-      btn.textContent = "SUBIR APP";
-      limpiarFormulario();
-      if (!inSearchMode) {
-        loadInitialApps();
-      } else {
-        const currentSearch = searchInput.value.trim();
-        if (currentSearch) performSearch(currentSearch);
-      }
-    })
-    .catch(err => {
-      estado.textContent = "Error: " + err.message;
-      btn.disabled = false;
-    });
+  try {
+    // 1. Guardar en Firestore
+    await db.collection("apps").doc(id).set(data, { merge: true });
+    
+    // 2. Generar página HTML estática
+    await generarPaginaApp(data);
+    
+    estado.textContent = "✅ App guardada y página generada";
+    btn.disabled = false;
+    editId = null;
+    document.getElementById("formTitle").textContent = "➕ Nueva Aplicación";
+    btn.textContent = "SUBIR APP";
+    limpiarFormulario();
+    
+    // 3. Recargar lista
+    if (!inSearchMode) {
+      loadInitialApps();
+    } else {
+      const currentSearch = searchInput.value.trim();
+      if (currentSearch) performSearch(currentSearch);
+    }
+    
+  } catch (err) {
+    estado.textContent = "❌ Error: " + err.message;
+    btn.disabled = false;
+  }
+}
+
+// =======================================================
+// ELIMINAR APP (Y SU PÁGINA)
+// =======================================================
+async function eliminarApp(id) {
+  if (!confirm("¿Estás seguro de eliminar esta aplicación? También se eliminará su página.")) return;
+  
+  try {
+    // 1. Eliminar la página de Storage si existe
+    const storageRef = firebase.storage().ref();
+    const pageRef = storageRef.child(`pages/app-${id}.html`);
+    
+    try {
+      await pageRef.delete();
+      console.log(`Página app-${id}.html eliminada`);
+    } catch (error) {
+      console.log("No se encontró la página para eliminar");
+    }
+    
+    // 2. Eliminar de Firestore
+    await db.collection("apps").doc(id).delete();
+    
+    // 3. Eliminar de la vista
+    document.getElementById(`app-row-${id}`)?.remove();
+    
+    alert("✅ Aplicación eliminada correctamente");
+    
+  } catch (error) {
+    console.error("Error eliminando app:", error);
+    alert("❌ Error al eliminar la aplicación");
+  }
 }
 
 // =======================================================
@@ -373,7 +744,11 @@ async function guardarApp() {
 // =======================================================
 function limpiarFormulario() {
   const inputs = document.querySelectorAll("input, textarea, select");
-  inputs.forEach(i => i.value = "");
+  inputs.forEach(i => {
+    if (i.type !== 'button' && i.type !== 'submit' && i.id !== 'cancelarBtn') {
+      i.value = "";
+    }
+  });
 
   categoria.value = "Educación";
   tipo.value = "Gratis";
@@ -386,6 +761,11 @@ function limpiarFormulario() {
   if (imagenEl) imagenEl.value = "";
   if (apkEl) apkEl.value = "";
   if (capturasEl) capturasEl.value = "";
+
+  // Resetear labels de archivos
+  document.getElementById("imagenLabel").textContent = "Seleccionar";
+  document.getElementById("apkLabel").textContent = "Seleccionar";
+  document.getElementById("capturasLabel").textContent = "Seleccionar";
 
   prevSize = null;
 }
@@ -420,7 +800,12 @@ function updateFileName(inputId, labelId) {
   const label = document.getElementById(labelId);
   
   input.addEventListener('change', function() {
-    const fileName = input.files[0] ? input.files[0].name : 'Seleccionar';
-    label.textContent = fileName;
+    if (input.files.length > 1) {
+      label.textContent = `${input.files.length} archivos seleccionados`;
+    } else if (input.files[0]) {
+      label.textContent = input.files[0].name;
+    } else {
+      label.textContent = 'Seleccionar';
+    }
   });
 }
